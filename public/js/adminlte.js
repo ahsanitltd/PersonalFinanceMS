@@ -1,13 +1,9 @@
-/*!
- * AdminLTE v4.0.0-rc4 (https://adminlte.io)
- * Copyright 2014-2025 Colorlib <https://colorlib.com>
- * Licensed under MIT (https://github.com/ColorlibHQ/AdminLTE/blob/master/LICENSE)
- */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-    typeof define === 'function' && define.amd ? define(['exports'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.adminlte = {}));
-})(this, (function (exports) { 'use strict';
+        typeof define === 'function' && define.amd ? define(['exports'], factory) :
+            (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.adminlte = {}));
+})(this, (function (exports) {
+    'use strict';
 
     const domContentLoadedCallbacks = [];
     const onDOMContentLoaded = (callback) => {
