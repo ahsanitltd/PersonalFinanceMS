@@ -1,29 +1,16 @@
 <?php
 
-// if (!function_exists('getCompanyData')) {
-//     function getCompanyData()
-//     {
-//         return cache()->remember('company_info', 86400, function () {
-//             return \App\Models\Company::first();
-//         });
-//     }
-// }
-
 if (!function_exists('refreshTokenCache')) {
     function refreshTokenCache()
     {
         if (auth()->check()) {
             $user = auth()->user();
-
             deleteUserToken(); // Delete all tokens with this name
-
             $token = $user->createToken('api-token')->plainTextToken; // Create new token
-
             cache()->put('user_token_' . $user->id, $token, 60 * 60 * 24); // 24 hours // Cache it manually
 
             return $token;
         }
-
         return null;
     }
 }
@@ -57,7 +44,7 @@ if (!function_exists('deleteUserToken')) {
             // Remove token from cache
             cache()->forget('user_token_' . $user->id);
         }
-        
+
         return null;
     }
 }
