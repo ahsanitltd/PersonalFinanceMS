@@ -18,7 +18,7 @@
 
                     <table class="table table-striped" data-url="{{ route('api-company-data.index') }}">
                         <thead>
-                            <th class="text-center">
+                            <th class="text-center" style="vertical-align: top;">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" value="" id="check_all_box" />
                                 </div>
@@ -76,6 +76,13 @@
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+                <div class="col-sm-4">
+                    <select class="form-control select2-ajax" data-url="" data-id-field="id" data-text-field="name"
+                        data-placeholder="Select a Company">
+                        <option value="">test me</option>
+                        <option value="1">1test me</option>
+                    </select>
                 </div>
             </div>
         </div>
