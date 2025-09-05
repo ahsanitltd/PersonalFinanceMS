@@ -22,6 +22,11 @@
                                             <i class="fas fa-plus"></i>
                                             Create
                                         </button>
+                                        <button id="multiple_delete_btn"
+                                            class="btn btn-sm btn-outline-danger mt-2 w-100 d-none" type="submit"
+                                            data-url="{{ route('api-company-data.destroy', 0) }}">
+                                            Delete all
+                                        </button>
                                     </th>
                                     <th colspan="2">
                                         <button class="btn btn-outline-success mr-1" onclick="exportToExcel()">
@@ -62,11 +67,6 @@
                                 </tr>
                             </tfoot>
                         </table>
-
-                        <button id="multiple_delete_btn" class="btn btn-xs btn-outline-danger mr-2 d-none" type="submit"
-                            data-url="{{ route('api-company-data.destroy', 0) }}">
-                            Delete all
-                        </button>
                     </div>
                 </div>
 
