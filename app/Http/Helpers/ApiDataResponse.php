@@ -16,7 +16,7 @@ if (! function_exists('successResponse')) {
         return response()->json([
             'success' => 1,
             'message' => $message,
-            'data' => $data,
+            'data' => $data
         ], 200);
     }
 }
