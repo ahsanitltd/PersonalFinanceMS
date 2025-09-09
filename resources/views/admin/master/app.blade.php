@@ -73,7 +73,7 @@
     @yield('custom-css')
 </head>
 
-<body class="hold-transition sidebar-mini">
+<body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
         <nav class="main-header navbar navbar-expand navbar-white navbar-light">
 

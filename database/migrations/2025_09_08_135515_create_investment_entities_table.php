@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('investment_entities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('name'); // Tesla, John Doe, My Land Flip
+            $table->string('name')->index(); // Tesla, John Doe, My Land Flip
             $table->enum('type', ['individual', 'company', 'stock', 'crypto', 'real_estate', 'deal']);
-            $table->string('contact')->nullable(); // optional phone/email
+            $table->string('contact')->nullable()->index(); // optional phone/email
             $table->text('description')->nullable(); // notes
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('company_id')->nullable();
             $table->timestamps();
         });
     }

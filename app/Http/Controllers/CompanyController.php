@@ -16,10 +16,15 @@ class CompanyController extends Controller
     public function index(Request $request, FilterModel $filterModel)
     {
         try {
-
             $query = $filterModel->handle(Company::query(), $request);
             
-            return successResponse('Showing All Data', $query->orderBy('id', 'DESC')->paginate(10));
+            if (!empty($request->columns)) {
+                $query->orderBy('name', 'ASC');
+            } else {
+                $query->orderBy('id', 'DESC');
+            }
+
+            return successResponse('Showing All Data', $query->paginate(10));
         } catch (\Exception $e) {
             return errorResponse($e);
         }

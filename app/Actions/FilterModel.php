@@ -16,12 +16,17 @@ class FilterModel
         $model = $query->getModel();
         $columns = $columns ?: $model->getFillable();
 
+        // 1. Apply global search across all fillable (OR logic)
+        if ($request->filled('search')) {
+            $query->whereAny($columns, 'LIKE', '%' . $request->input('search') . '%');
+        }
+
+        // 2. Apply field-specific LIKE filters (AND logic)
         $filterFields = array_filter(
             $request->only($columns),
             fn($v) => $v !== null && $v !== ''
         );
 
-        // 1. Apply field-specific LIKE filters (AND logic)
         if (!empty($filterFields)) {
             $query->whereAll(
                 array_map(
@@ -30,11 +35,6 @@ class FilterModel
                     $filterFields
                 )
             );
-        }
-
-        // 2. Apply global search across all fillable (OR logic)
-        if ($request->filled('search')) {
-            $query->whereAny($columns, 'LIKE', '%' . $request->input('search') . '%');
         }
 
         return $query;
