@@ -17,7 +17,7 @@ class CompanyController extends Controller
     {
         try {
             $query = $filterModel->handle(Company::query(), $request);
-            
+
             if (!empty($request->columns)) {
                 $query->orderBy('name', 'ASC');
             } else {
