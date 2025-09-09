@@ -12,24 +12,25 @@
                 <div class="col-md-10 md-offset-2 col-sm-12">
                     <div class="card">
                         <div class="card-body table-responsive p-0">
-                            <table class="table table-hover table-head-fixed text-nowrap" id="dataTable"
-                                data-url="{{ route('api-company-data.index') }}" data-columns='["name", "mobile", "address"]'>
+                            <table class="table table-striped table-hover" id="dataTable"
+                                data-url="{{ route('api-investment-entity-data.index') }}"
+                                data-columns='["name","type","contact","description","created_by"]'>
                                 <thead>
                                     <tr>
                                         <th colspan="2">
                                             <button type="button" class="btn btn-sm btn-outline-primary create-btn w-100"
-                                                data-url="{{ route('api-company-data.store') }}" data-toggle="modal"
-                                                data-target="form-modal">
+                                                data-url="{{ route('api-investment-entity-data.store') }}"
+                                                data-toggle="modal" data-target="form-modal">
                                                 <i class="fas fa-plus"></i>
                                                 Create
                                             </button>
                                             <button id="multiple_delete_btn"
                                                 class="btn btn-sm btn-outline-danger mt-2 w-100 d-none" type="submit"
-                                                data-url="{{ route('api-company-data.destroy', 0) }}">
+                                                data-url="{{ route('api-investment-entity-data.destroy', 0) }}">
                                                 Delete all
                                             </button>
                                         </th>
-                                        <th colspan="2">
+                                        <th colspan="3">
                                             <button class="btn btn-outline-success mr-1" onclick="exportToExcel()">
                                                 <i class="fas fa-download"></i> Excel
                                             </button>
@@ -40,7 +41,7 @@
                                                 <i class="fas fa-download"></i> Word
                                             </button>
                                         </th>
-                                        <th colspan="2">
+                                        <th colspan="3">
                                             <input class="form-control" type="search" placeholder="Search"
                                                 id="searchInput">
                                         </th>
@@ -54,8 +55,10 @@
                                             </div>
                                         </th>
                                         <th>Name</th>
-                                        <th>Mobile</th>
-                                        <th>Address</th>
+                                        <th>Type</th>
+                                        <th>Contact</th>
+                                        <th>Description</th>
+                                        <th>Created&nbsp;By</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -82,7 +85,7 @@
         </div>
     </section>
 
-    @include('admin.company.form-modal')
+    @include('admin.investmentEntity.form-modal')
 @endsection
 
 @section('custom-js')

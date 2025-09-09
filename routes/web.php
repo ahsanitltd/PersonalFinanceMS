@@ -1,9 +1,7 @@
 <?php
 
-use App\Http\Controllers\FrontendController;
-use App\Http\Controllers\MyCompanyController;
+use App\Http\Controllers\front\FrontendController;
 use App\Http\Controllers\ProfileController;
-use App\Models\Company;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -22,5 +20,5 @@ require __DIR__ . '/auth.php';
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [FrontendController::class, 'dashboard'])->name('dashboard');
     Route::get('/company', [FrontendController::class, 'company'])->name('company');
+    Route::get('/investment-entity', [FrontendController::class, 'investmentEntity'])->name('investmentEntity');
 });
-

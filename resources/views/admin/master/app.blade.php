@@ -56,6 +56,18 @@
         .table thead th {
             vertical-align: top;
         }
+
+        .highlight-row {
+            background-color: #ffff99 !important;
+            /* light yellow highlight */
+            transition: background-color 2s ease;
+        }
+
+        /* Optional: fade out the highlight after a few seconds */
+        .highlight-row.fade-out {
+            background-color: transparent;
+            transition: background-color 2s ease;
+        }
     </style>
 
     @yield('custom-css')
