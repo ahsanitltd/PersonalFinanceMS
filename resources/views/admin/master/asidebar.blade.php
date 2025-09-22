@@ -26,7 +26,7 @@
                             @csrf
                             <a href="{{ route('logout') }}"
                                 onclick="event.preventDefault(); this.closest('form').submit();"
-                                class="text-sm btn btn-xs btn-danger">
+                                class="text-sm text-white btn btn-xs btn-danger rounded">
                                 {{ __('Logout') }}
                             </a>
                         </form>
@@ -38,11 +38,11 @@
                     <div class="input-group" data-widget="sidebar-search">
                         <input class="form-control form-control-sidebar" type="search" placeholder="Search"
                             aria-label="Search">
-                        <div class="input-group-append">
+                        {{-- <div class="input-group-append">
                             <button class="btn btn-sidebar">
                                 <i class="fas fa-search fa-fw"></i>
                             </button>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
 
@@ -61,7 +61,7 @@
 
                         {{-- Investment --}}
                         @php
-                            $investmentOpen = request()->routeIs('investmentEntity*');
+                            $investmentOpen = request()->routeIs('investment*');
                         @endphp
                         <li class="nav-item {{ $investmentOpen ? 'menu-open' : '' }}">
                             <a href="#" class="nav-link {{ $investmentOpen ? 'active' : '' }}">
@@ -73,59 +73,29 @@
                             </a>
                             <ul class="nav nav-treeview">
                                 <li class="nav-item">
-                                    <a href="{{ route('investmentEntity') }}"
-                                        class="nav-link {{ request()->routeIs('investmentEntity') ? 'active' : '' }}">
+                                    <a href="{{ route('investment') }}"
+                                        class="nav-link {{ request()->routeIs('investment') ? 'active' : '' }}">
                                         <i class="far fa-circle nav-icon"></i>
-                                        <p>Investment Entity</p>
+                                        <p>Invest</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('investment.partner') }}"
+                                        class="nav-link {{ request()->routeIs('investment.partner') ? 'active' : '' }}">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Investment Partner</p>
                                     </a>
                                 </li>
                             </ul>
                         </li>
 
                         {{-- Job --}}
-                        @php
-                            $jobOpen = request()->is('index2*');
-                        @endphp
-                        <li class="nav-item {{ $jobOpen ? 'menu-open' : '' }}">
-                            <a href="#" class="nav-link {{ $jobOpen ? 'active' : '' }}">
+                        <li class="nav-item">
+                            <a href="{{ route('job.earning') }}"
+                                class="nav-link {{ request()->routeIs('job.earning') ? 'active' : '' }}">
                                 <i class="nav-icon fas fa-briefcase"></i>
-                                <p>
-                                    Job
-                                    <i class="right fas fa-angle-left"></i>
-                                </p>
+                                <p>Job</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="../../index2.html"
-                                        class="nav-link {{ request()->is('index2*') ? 'active' : '' }}">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Dashboard v2</p>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        {{-- Business --}}
-                        @php
-                            $businessOpen = request()->is('index3*');
-                        @endphp
-                        <li class="nav-item {{ $businessOpen ? 'menu-open' : '' }}">
-                            <a href="#" class="nav-link {{ $businessOpen ? 'active' : '' }}">
-                                <i class="nav-icon fas fa-landmark"></i>
-                                <p>
-                                    Business
-                                    <i class="right fas fa-angle-left"></i>
-                                </p>
-                            </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="../../index3.html"
-                                        class="nav-link {{ request()->is('index3*') ? 'active' : '' }}">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Dashboard v3</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
                         {{-- Company --}}

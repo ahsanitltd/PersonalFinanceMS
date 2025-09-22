@@ -9,39 +9,39 @@
     <section class="content">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-md-10 md-offset-2 col-sm-12">
+                <div class="col-sm-12">
                     <div class="card">
                         <div class="card-body table-responsive p-0">
-                            <table class="table table-striped table-hover" id="dataTable"
-                                data-url="{{ route('api-investment-entity-data.index') }}"
+                            <table class="table table-hover table-head-fixed text-nowrap" id="dataTable"
+                                data-url="{{ route('api-investment-partner-data.index') }}"
                                 data-columns='["name","type","contact","description","created_by"]'>
                                 <thead>
                                     <tr>
-                                        <th colspan="2">
-                                            <button type="button" class="btn btn-sm btn-outline-primary create-btn w-100"
-                                                data-url="{{ route('api-investment-entity-data.store') }}"
+                                        <th colspan="3">
+                                            <button type="button" class="btn btn-primary w-100 create-btn mb-2"
+                                                data-url="{{ route('api-investment-partner-data.store') }}"
                                                 data-toggle="modal" data-target="form-modal">
                                                 <i class="fas fa-plus"></i>
                                                 Create
                                             </button>
-                                            <button id="multiple_delete_btn"
-                                                class="btn btn-sm btn-outline-danger mt-2 w-100 d-none" type="submit"
-                                                data-url="{{ route('api-investment-entity-data.destroy', 0) }}">
+                                        </th>
+                                        <th colspan="3" class="text-center">
+                                            <button class="btn btn-outline-danger mr-1 d-none" type="submit"
+                                                data-url="{{ route('api-investment-partner-data.destroy', 0) }}"
+                                                id="multiple_delete_btn">
                                                 Delete all
                                             </button>
-                                        </th>
-                                        <th colspan="3">
                                             <button class="btn btn-outline-success mr-1" onclick="exportToExcel()">
                                                 <i class="fas fa-download"></i> Excel
                                             </button>
                                             <button class="btn btn-outline-danger mx-1" onclick="exportToPDF()">
                                                 <i class="fas fa-download"></i> PDF
                                             </button>
-                                            <button class="btn btn-outline-primary ml-1" onclick="exportToWord()">
+                                            <button class="btn btn-outline-primary mx-1" onclick="exportToWord()">
                                                 <i class="fas fa-download"></i> Word
                                             </button>
                                         </th>
-                                        <th colspan="3">
+                                        <th colspan="2">
                                             <input class="form-control" type="search" placeholder="Search"
                                                 id="searchInput">
                                         </th>
@@ -76,16 +76,11 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="col-md-2">
-                    <div class="border border-white rounded h-100 p-2">
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    @include('admin.investmentEntity.form-modal')
+    @include('admin.investmentPartner.form-modal')
 @endsection
 
 @section('custom-js')

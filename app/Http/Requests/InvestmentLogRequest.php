@@ -5,8 +5,11 @@ namespace App\Http\Requests;
 use App\Traits\IsValidRequest;
 use Illuminate\Foundation\Http\FormRequest;
 
-class InvestmentEntityRequest extends FormRequest
+class InvestmentLogRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     use IsValidRequest;
 
     public function authorize(): bool
@@ -22,10 +25,11 @@ class InvestmentEntityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:individual,company,stock,crypto,real_estate,deal',
-            'contact' => 'required|string',
-            'description' => 'nullable|string'
+            "investment_id" => 'required|numeric',
+            'type' => 'required|in:investment,partner_investment,due_payment,profit,loss,return,note',
+            "paid_by" => 'required|numeric',
+            "amount" => 'required|numeric',
+            "note" => 'nullable|string',
         ];
     }
 }

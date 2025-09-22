@@ -9,9 +9,9 @@ class FilterModel
 {
     public function handle(Builder $query, Request $request, array $columns = []): Builder
     {
-        if (!empty($request->columns)) {
-            $query->select($request->columns);
-        }
+        // if (!empty($request->columns)) {
+        //     $query->select($request->columns);
+        // }
 
         $model = $query->getModel();
         $columns = $columns ?: $model->getFillable();

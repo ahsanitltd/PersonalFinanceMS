@@ -39,7 +39,7 @@ const initSelect2WithAjaxCall = ($context = $(document)) => {
                     processResults: data => ({
                         results: (data.data?.data || []).map(item => ({
                             id: item[columns.id],
-                            text: item[columns.text],
+                            text: formatLabel(item[columns.text]),
                         })),
                         pagination: { more: data.data?.current_page < data.data?.last_page },
                     }),
@@ -54,6 +54,16 @@ const initSelect2WithAjaxCall = ($context = $(document)) => {
         }
     });
 };
+
+function formatLabel(str) {
+    if (!str) return '';
+
+    return str
+        .replace(/[^a-zA-Z0-9]+/g, ' ') // replace special chars with space
+        .trim()                         // remove leading/trailing space
+        .toLowerCase()                  // all lowercase
+        .replace(/^./, c => c.toUpperCase()); // first letter capital
+}
 
 
 $(document).ready(function () {

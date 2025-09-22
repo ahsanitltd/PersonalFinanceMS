@@ -52,24 +52,3 @@
     </div>
     <!-- /.modal-dialog -->
 </div>
-
-{{-- example of select with dynamic ajax and also static options --}}
-{{-- <div class="col-sm-6 mt-1 ">
-    <label>Type</label>
-    <select class="form-control select2-ajax" name="type" data-url="" data-placeholder="Select Type">
-        <option value="">Select Type</option>
-        <option value="individual">individual</option>
-        <option value="company">company</option>
-        <option value="stock">stock</option>
-        <option value="crypto">crypto</option>
-        <option value="real_estate">real_estate</option>
-        <option value="deal">deal</option>
-    </select>
-</div>
-<div class="col-sm-6 mt-1 ">
-    <label>Company</label>
-    <select class="form-control select2-ajax" name="company" data-url="{{ route('api-company-data.index') }}"
-        data-columns='{"id":"id", "text":"name"}' data-placeholder="Select a Company">
-        <option value="">Select company</option>
-    </select>
-</div> --}}

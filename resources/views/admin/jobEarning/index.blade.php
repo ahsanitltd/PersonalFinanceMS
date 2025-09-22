@@ -3,7 +3,6 @@
 @section('custom-css')
 @endsection
 
-
 @section('main-content')
     <!-- Main content -->
     <section class="content">
@@ -13,20 +12,21 @@
                     <div class="card">
                         <div class="card-body table-responsive p-0">
                             <table class="table table-hover table-head-fixed text-nowrap" id="dataTable"
-                                data-url="{{ route('api-company-data.index') }}" data-columns='["name", "mobile", "address"]'>
+                                data-url="{{ route('api-job-earning-data.index') }}"
+                                data-columns='["company_name", "amount", "earn_month", "is_paid"]'>
+
                                 <thead>
                                     <tr>
                                         <th colspan="2">
                                             <button type="button" class="btn btn-sm btn-outline-primary create-btn w-100"
-                                                data-url="{{ route('api-company-data.store') }}" data-toggle="modal"
+                                                data-url="{{ route('api-job-earning-data.store') }}" data-toggle="modal"
                                                 data-target="form-modal">
-                                                <i class="fas fa-plus"></i>
-                                                Create
+                                                <i class="fas fa-plus"></i> Create
                                             </button>
                                         </th>
                                         <th colspan="2">
                                             <button id="multiple_delete_btn" class="btn btn-outline-danger mr-2 d-none"
-                                                type="submit" data-url="{{ route('api-company-data.destroy', 0) }}">
+                                                type="submit" data-url="{{ route('api-job-earning-data.destroy', 0) }}">
                                                 Delete all
                                             </button>
                                             <button class="btn btn-outline-success mr-1" onclick="exportToExcel()">
@@ -39,7 +39,7 @@
                                                 <i class="fas fa-download"></i> Word
                                             </button>
                                         </th>
-                                        <th colspan="2">
+                                        <th colspan="3">
                                             <input class="form-control" type="search" placeholder="Search"
                                                 id="searchInput">
                                         </th>
@@ -52,15 +52,18 @@
                                                     id="check_all_box" />
                                             </div>
                                         </th>
-                                        <th>Name</th>
-                                        <th>Mobile</th>
-                                        <th>Address</th>
+                                        <th>Company</th>
+                                        <th>Amount</th>
+                                        <th>Month</th>
+                                        <th>Paid</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
-                                    <!-- Rows will be loaded via AJAX -->
+                                    <!-- Loaded via AJAX -->
                                 </tbody>
+
                                 <tfoot>
                                     <tr>
                                         <td colspan="100" class="text-center">
@@ -68,6 +71,7 @@
                                         </td>
                                     </tr>
                                 </tfoot>
+
                             </table>
                         </div>
                     </div>
@@ -76,7 +80,7 @@
         </div>
     </section>
 
-    @include('admin.company.form-modal')
+    @include('admin.jobEarning.form-modal')
 @endsection
 
 @section('custom-js')

@@ -7,6 +7,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="bearer-token" content="{{ getUserToken() }}">
     <meta name="app-locale" content="{{ app()->getLocale() }}">
+    <meta name="app-env" content="{{ app()->environment() }}">
+
 
     <title>{{ config('app.name', 'Laravel App') }}</title>
 
@@ -68,12 +70,54 @@
             background-color: transparent;
             transition: background-color 2s ease;
         }
+
+        /* Sidebar search suggestion dropdown */
+        #sidebar-search-suggestions {
+            position: absolute;
+            background: #343a40;
+            /* dark sidebar bg */
+            border: 1px solid #4b545c;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 180px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1050;
+            color: #c2c7d0;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgb(0 0 0 / 0.2);
+        }
+
+        #sidebar-search-suggestions li {
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+
+        #sidebar-search-suggestions li:hover {
+            background-color: #1d2124;
+            color: #fff;
+        }
+
+        #sidebar-search-suggestions .no-results {
+            padding: 7px 12px;
+            color: #6c757d;
+            cursor: default;
+        }
+
+        mark {
+            background: #ffc107;
+            color: #212529;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
     </style>
 
     @yield('custom-css')
 </head>
 
-<body class="hold-transition sidebar-mini sidebar-collapse">
+{{-- sidebar-collapse --}}
+
+<body class="hold-transition sidebar-mini">
     <div class="wrapper">
         <nav class="main-header navbar navbar-expand navbar-white navbar-light">
 
@@ -138,14 +182,19 @@
                 <div class="container-fluid">
                     <div class="row mb-2">
                         <div class="col-sm-6">
-                            <h1 class="m-0 text-capitalize">{{ request()->segment(1) }} data</h1>
+                            <h1 class="m-0">
+                                {{ ucfirst(strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', ' ', request()->segment(1))))) }}
+                                data</h1>
                         </div>
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-right">
                                 <li class="breadcrumb-item">
                                     <a href="{{ route('dashboard') }}">Home</a>
                                 </li>
-                                <li class="breadcrumb-item text-capitalize active">{{ request()->segment(1) }}</li>
+                                <li class="breadcrumb-item active">
+                                    {{ ucfirst(strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', ' ', request()->segment(1))))) }}
+
+                                </li>
                             </ol>
                         </div>
                     </div>
@@ -167,6 +216,16 @@
         <aside class="control-sidebar control-sidebar-dark">
         </aside>
     </div>
+
+
+    {{-- audio  --}}
+    <!-- Audio Elements -->
+    <audio id="successAudio" src="{{ asset('assets/music/success.mp3') }}"></audio>
+    <audio id="errorAudio" src="{{ asset('assets/music/error.mp3') }}"></audio>
+    <audio id="warningAudio" src="{{ asset('assets/music/warning.mp3') }}"></audio>
+    <audio id="infoAudio" src="{{ asset('assets/music/info.mp3') }}"></audio>
+
+    {{-- audio ends  --}}
 
     <!-- jQuery -->
     <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
@@ -216,6 +275,98 @@
     {{-- Common ajax data for CRUD operation --}}
     <script src="{{ asset('assets/js/ajax-jquery-crud.js') }}"></script>
     <script src="{{ asset('assets/js/ajax-select2.js') }}"></script>
+
+
+    {{-- menusbar search js  --}}
+    <script>
+        $(function() {
+            const $input = $('.form-control-sidebar');
+            let $suggestions;
+
+            function createSuggestionBox() {
+                if (!$suggestions) {
+                    $suggestions = $('<ul id="sidebar-search-suggestions" class="list-unstyled"></ul>');
+                    $input.parent().after($suggestions);
+                }
+            }
+
+            function removeSuggestionBox() {
+                if ($suggestions) {
+                    $suggestions.remove();
+                    $suggestions = null;
+                }
+            }
+
+            function getMenuData() {
+                const data = [];
+                $('.nav-sidebar > li').each(function() {
+                    const $parent = $(this);
+                    const parentText = $parent.find('> a > p').text().trim();
+                    const parentHref = $parent.find('> a').attr('href') || '#';
+                    data.push({
+                        type: 'parent',
+                        text: parentText,
+                        href: parentHref
+                    });
+                    $parent.find('ul li').each(function() {
+                        const $child = $(this);
+                        const childText = $child.text().trim();
+                        const childHref = $child.find('a').attr('href') || '#';
+                        data.push({
+                            type: 'child',
+                            text: childText,
+                            href: childHref
+                        });
+                    });
+                });
+                return data;
+            }
+
+            function highlight(text, query) {
+                const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                return text.replace(regex, '<mark>$1</mark>');
+            }
+
+            $input.on('input', function() {
+                const q = $(this).val().toLowerCase().trim();
+                removeSuggestionBox();
+
+                if (!q) return;
+
+                const menuData = getMenuData();
+                const matches = menuData.filter(item => item.text.toLowerCase().includes(q));
+
+                createSuggestionBox();
+                $suggestions.empty();
+
+                if (matches.length === 0) {
+                    $suggestions.append('<li class="no-results">No results found</li>');
+                    return;
+                }
+
+                matches.forEach(item => {
+                    const $li = $('<li>').html(highlight(item.text, q));
+                    if (item.href && item.href !== '#') {
+                        $li.css('cursor', 'pointer').on('click', () => {
+                            window.location.href = item.href;
+                        });
+                    }
+                    $suggestions.append($li);
+                });
+            });
+
+            // Close suggestions on outside click
+            $(document).on('click', function(e) {
+                if (!$input.is(e.target) && !$suggestions?.is(e.target) && !$suggestions?.has(e.target)
+                    .length) {
+                    removeSuggestionBox();
+                }
+            });
+        });
+    </script>
+
+
+
 
     @yield('custom-js')
 

@@ -3,9 +3,18 @@
 // this options are completely replacedable and usable dynamically many times if needed on each page
 const $table = $('#dataTable');
 const $tbody = $table.find('tbody');
-const $pagination = $('#pagination-wrapper');
 const baseUrl = $table.data('url');
-const columns = $table.data('columns'); // serially showable columns on table like, ["name", "mobile", "address"]... will come as modified name from data
+
+// serially showable columns on table like, ["name", "mobile", "address"]... will come as modified name from data
+// const columns = JSON.parse($table.attr('data-columns'));
+let columns = $table.attr('data-columns') ? JSON.parse($table.attr('data-columns')) : [];
+
+const tableType = $table.data('type') || 'simple'; // default to simple
+const expandableUrl = $table.data('expandable-url');
+const expandableKey = $table.data('expandable-key') || 'parent_id';
+
+
+const $pagination = $('#pagination-wrapper');
 
 
 let currentPage = 1;
@@ -28,11 +37,13 @@ function fetchData(page = 1, searchQuery = '', highlightId = null) {
             return;
         }
 
-        // console.log(response);
-        // console.log(response.data.data);
-        // console.log(response.data);
+        if (tableType === 'expandable') {
+            renderExpandableRows(response.data.data, highlightId, response.data.per_page);
+            // initializeExpandableRows(); // Optional: if needed for UI behavior
+        } else {
+            renderRows(response.data.data, highlightId, response.data.per_page);
+        }
 
-        renderRows(response.data.data, highlightId, response.data.per_page);
         renderPagination(response.data);
 
         if (highlightId) {
@@ -45,6 +56,164 @@ function fetchData(page = 1, searchQuery = '', highlightId = null) {
         $('#loader').hide();
         $tbody.html(`<tr><td colspan="${columns.length + 2}">Error fetching data</td></tr>`);
         $pagination.empty();
+    });
+}
+
+
+function renderExpandableRows(rows, highlightId = null, perPage = 10) {
+    $tbody.empty();
+
+    if (!rows || rows.length === 0) {
+        $tbody.append(`<tr><td colspan="${columns.length + 3}">No data found.</td></tr>`);
+        return;
+    }
+
+    rows.forEach((item, index) => {
+        const serial = (currentPage - 1) * perPage + index + 1;
+        const highlightClass = item.id == highlightId ? 'highlight-row' : '';
+        const nestedCols = ['id', 'name', 'type', 'contact', 'description'];
+        const nestedColsJson = JSON.stringify(nestedCols);
+
+        let rowHtml = `<tr class="${highlightClass}" data-expandable-row data-id="${item.id}" data-expandable-columns='${nestedColsJson}' aria-expanded="false">`;
+
+        // Serial + checkbox
+        rowHtml += `
+            <td>${serial}</td>`;
+
+        // <td class="text-center">
+        //     <input type="checkbox" name="id" class="checkitem" value="${item.id}" />
+        // </td>
+
+
+        // Data columns
+        columns.forEach(col => {
+            let val = item[col] ?? '';
+            val = String(val).trim();
+            if (!val) val = '<span class="text-muted">-</span>';
+            else if (val.length > 100) val = `<span title="${val}">${val.slice(0, 100)}...</span>`;
+            rowHtml += `<td>${val}</td>`;
+        });
+
+        // Actions
+        rowHtml += `
+            <td>
+                <button class="btn btn-sm btn-outline-primary mr-1 create-btn" data-url="${baseUrl}/${item.id}">Create</button>
+                <button class="btn btn-sm btn-outline-primary edit-btn" data-url="${baseUrl}/${item.id}">Edit</button>
+                <button class="btn btn-sm btn-outline-danger delete-btn" data-url="${baseUrl}/${item.id}" data-id="${item.id}">Delete</button>
+            </td>
+        </tr>`;
+
+        // Expandable row with nested content
+        rowHtml += `
+            <tr class="expandable-body d-none">
+                <td colspan="${columns.length + 3}">
+                    <div class="nested-table-wrapper"></div>
+                </td>
+            </tr>`;
+
+        $tbody.append(rowHtml);
+    });
+
+    // Handle row expand/collapse and nested load
+    $tbody.off('click', 'tr[data-expandable-row]').on('click', 'tr[data-expandable-row]', function () {
+        const $row = $(this);
+        const parentId = $row.data('id');
+        const $nestedRow = $row.next('tr.expandable-body');
+        const $wrapper = $nestedRow.find('.nested-table-wrapper');
+        const isOpen = $row.attr('aria-expanded') === 'true';
+
+        if (isOpen) {
+            $row.attr('aria-expanded', 'false');
+            $nestedRow.addClass('d-none');
+            return;
+        }
+
+        $row.attr('aria-expanded', 'true');
+        $nestedRow.removeClass('d-none');
+
+        if ($wrapper.data('loaded')) return;
+
+        loadNestedPage(parentId, 1);
+
+        function loadNestedPage(id, page) {
+            $wrapper.html('Loading...');
+
+            let cols = [];
+            try {
+                cols = JSON.parse($row.attr('data-expandable-columns'));
+            } catch {
+                cols = [];
+            }
+
+            $.get(expandableUrl, { [expandableKey]: id, columns: cols, page }, function (res) {
+                if (res?.success && res.data?.data?.length) {
+                    let html = '<div class="card"><table class="table table-sm table-hover"><thead><tr>';
+                    cols.forEach(c => html += `<th>${typeof c === 'string' ? c : c.label || c.key}</th>`);
+                    html += '<th>Actions</th></tr></thead><tbody>';
+
+                    res.data.data.forEach((nested, index) => {
+                        const serial = (res.data.current_page - 1) * res.data.per_page + index + 1;
+                        html += '<tr>';
+                        html += `<td>${serial}</td>`;
+                        cols.forEach(c => {
+                            const key = typeof c === 'string' ? c : c.key;
+                            if (key === 'id') return;
+                            html += `<td>${nested[key] ?? ''}</td>`;
+                        });
+                        html += `
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary edit-btn" data-url="${expandableUrl}/${nested.id}">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-url="${expandableUrl}/${nested.id}" data-id="${nested.id}">Delete</button>
+                            </td>
+                        </tr>`;
+                    });
+
+
+                    // Table footer for pagination
+                    html += `</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="${cols.length + 1}" class="nested-pagination-cell"></td>
+                            </tr>
+                        </tfoot>
+                    </table></div>`;
+
+                    $wrapper.html(html);
+
+                    // Build pagination inside tfoot
+                    const totalPages = Math.ceil(res.data.total / res.data.per_page);
+                    if (totalPages > 1) {
+                        let pagHtml = '<ul class="pagination pagination-sm justify-content-center mb-0">';
+                        pagHtml += `<li class="page-item ${page === 1 ? 'disabled' : ''}">
+                            <a href="#" class="page-link" data-page="${page - 1}">&laquo;</a></li>`;
+
+                        for (let p = 1; p <= totalPages; p++) {
+                            pagHtml += `<li class="page-item ${p === page ? 'active' : ''}">
+                                <a href="#" class="page-link" data-page="${p}">${p}</a></li>`;
+                        }
+
+                        pagHtml += `<li class="page-item ${page === totalPages ? 'disabled' : ''}">
+                            <a href="#" class="page-link" data-page="${page + 1}">&raquo;</a></li>`;
+                        pagHtml += '</ul>';
+
+                        $wrapper.find('.nested-pagination-cell').html(pagHtml);
+                    }
+
+                    $wrapper.data('loaded', true);
+                } else {
+                    $wrapper.html('<div class="text-muted">No nested data available.</div>');
+                }
+            }).fail(() => {
+                $wrapper.html('<div class="text-danger">Error loading nested data.</div>');
+            });
+        }
+
+        // Delegate pagination clicks inside nested table
+        $wrapper.off('click').on('click', 'a.page-link', function (e) {
+            e.preventDefault();
+            const page = parseInt($(this).data('page'));
+            if (page && page > 0) loadNestedPage(parentId, page);
+        });
     });
 }
 
@@ -72,9 +241,10 @@ function renderRows(rows, highlightId = null, perPage = 10) {
         rowHtml += `
                     <td class="text-center">
                         <div class="form-check">
-                            <input class="form-check-input checkitem" type="checkbox" value="${item.id}" />
+                            <input class="form-check-input checkitem" name="id" type="checkbox" value="${item.id}" />
                         </div>
                     </td>`;
+
 
         // Data columns
         columns.forEach(col => {
@@ -136,12 +306,21 @@ function renderRows(rows, highlightId = null, perPage = 10) {
         rowHtml += `
                     <td>
                         <div class="d-flex">
-                            <button class="btn btn-sm btn-outline-primary mr-1 edit-btn" data-url="${baseUrl}/${item.id}/edit">Edit</button>
+                            <button class="btn btn-sm btn-outline-primary mr-1 edit-btn" data-url="${baseUrl}/${item.id}">Edit</button>
                             <button class="btn btn-sm btn-outline-danger ml-1 delete-btn" data-url="${baseUrl}/${item.id}" data-id="${item.id}">Delete</button>
                         </div>
                     </td>`;
 
         rowHtml += `</tr>`;
+
+        rowHtml += `
+            <tr class="expandable-body" style="display:none;">
+              <td colspan="${columns.length + 1}">
+              <p>ldsfhdsakdfhasjk hhfsadhjksda kjsfhdkjdsfh kjshfkhkh </p>
+              </td>
+            </tr>
+        `;
+
         $tbody.append(rowHtml);
     });
 }
@@ -233,9 +412,12 @@ function renderPagination(data) {
 
     // "Go to page" input
     $pagination.append(`
-        <br><span class="mx-2">Go to page:</span>
-        <input type="number" min="1" max="${lastPage}" id="gotoPageInput" class="form-control d-inline-block" style="width: 120px;" value="${currentPage}">
-        <button class="btn btn-sm btn-outline-primary mx-1" id="gotoPageBtn">Go</button>
+        <br>
+        <div class="my-2">
+            <span class="mx-2">Go to page:</span>
+            <input type="number" min="1" max="${lastPage}" id="gotoPageInput" class="form-control d-inline-block" style="width: 120px;" value="${currentPage}">
+            <button class="btn btn-sm btn-outline-primary mx-1" id="gotoPageBtn">Go</button>
+        </div>
     `);
 }
 
@@ -262,7 +444,30 @@ $(document).on('input', '#gotoPageInput', function () {
 
 // Doanlodable options
 // Export options like (PDF, EXCEL, WORD)
+function isTableEmpty(tableId) {
+
+    playAudio('infoAudio');
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+
+    if (rows.length === 0) return true;
+
+    if (rows.length === 1) {
+        const cellText = rows[0].innerText.trim().toLowerCase();
+        // You can customize this match to suit your placeholder
+        if (cellText.includes('no data')) return true;
+    }
+
+    return false;
+}
+
+
 function exportToPDF() {
+
+    if (isTableEmpty('dataTable')) {
+        toastr.info('No data available in the table to pdf.', 'Export Skipped');
+        return;
+    }
+
     const {
         jsPDF
     } = window.jspdf;
@@ -279,10 +484,10 @@ function exportToPDF() {
         rows.push(row);
     });
 
+    const headerRow = ['#', ...columns.map(col => col.charAt(0).toUpperCase() + col.slice(1)), 'Action'];
+
     doc.autoTable({
-        head: [
-            ['', 'Name', 'Mobile', 'Address', 'Action']
-        ],
+        head: [headerRow],
         body: rows,
         startY: 20
     });
@@ -291,6 +496,12 @@ function exportToPDF() {
 }
 
 function exportToExcel() {
+
+    if (isTableEmpty('dataTable')) {
+        toastr.info('No data available in the table to excel.', 'Export Skipped');
+        return;
+    }
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.table_to_sheet(document.getElementById('dataTable'));
     XLSX.utils.book_append_sheet(wb, ws, "Company Data");
@@ -298,6 +509,11 @@ function exportToExcel() {
 }
 
 function exportToWord() {
+    if (isTableEmpty('dataTable')) {
+        toastr.info('No data available in the table to word.', 'Export Skipped');
+        return;
+    }
+
     const table = document.getElementById('dataTable').outerHTML;
     const blob = new Blob(['<html><body>' + table + '</body></html>'], {
         type: 'application/msword'
@@ -314,12 +530,28 @@ function exportToWord() {
 $(document).ready(function () {
     fetchData();
 });
+//
 // Custom DataTable(Read) operation ends here  
+//
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Custom CRUD operation using Modal (Create, Edit, Update, Delete) operation starts here 
 // Configurable options (can be modified globally)
-const config = {
+let config = {
     formId: '#form',
     modalId: '#form-modal',
     titleSelector: '.modal-title',
@@ -337,16 +569,20 @@ const config = {
 // Success callback handlers
 const handleCrudSuccess = {
     edit: (data) => {
-        openModal(data);
+        openModal(config, data);
+        // playAudio('infoAudio');
     },
     formSubmit: (data) => {
         // Handle form submission success
         fetchData(currentPage, search, data.data.id); // reload current page with highlight
         closeModal();
         toastr.success(data.message);
+        playAudio('successAudio');
     },
     delete: () => {
         fetchData();
+        toastr.success('Deleted successfully');
+        playAudio('successAudio');
         // setTimeout(() => window.location.reload(), 400);
     }
 };
@@ -363,9 +599,12 @@ const handleErrorResponse = ($xhr, timeout) => {
     const errorData = $xhr.responseJSON;
     if (typeof errorData.message === "string") {
         toastr.error('', errorData.message, { timeOut: timeout });
+        playAudio('errorAudio');
     } else {
+        let played = false;
         $.each(errorData.message, (key, message) => {
             toastr.error('', message, { timeOut: timeout });
+            if (!played) { playAudio('errorAudio'); played = true; }
         });
     }
 };
@@ -401,8 +640,25 @@ const ajaxCall = (param) => {
     });
 };
 
+function toggleNotes() {
+    const shortN = document.getElementById('shortNotes');
+    const fullN = document.getElementById('fullNotes');
+    const link = event.target;
+
+    if (fullN.style.display === 'none') {
+        fullN.style.display = 'inline';
+        shortN.style.display = 'none';
+        link.textContent = 'See less';
+    } else {
+        fullN.style.display = 'none';
+        shortN.style.display = 'inline';
+        link.textContent = 'See more';
+    }
+}
+
 // Modal open handler (Create/Edit)
-const openModal = (response) => {
+const openModal = (config, response) => {
+
     const $modal = $(config.modalId);
     const $form = $(config.formId);
     const $title = $modal.find(config.titleSelector);
@@ -417,20 +673,33 @@ const openModal = (response) => {
 
         $.each(response.data, (key, value) => {
             const $field = $(`[name="${key}"]`);
-
             if (!$field.length) return;
 
-            if ($field.is('select')) {
-                if ($field.find(`option[value="${value}"]`).length) {
-                    $field.val(value).trigger('change');
-                } else {
-                    const newOption = new Option(value, value, true, true);
+            if ($field.hasClass('select2-ajax')) {
+                // For select2 ajax fields, need to add option with id and text manually if missing
+                if (!$field.find(`option[value="${value}"]`).length) {
+                    // Try to get text from nested object with same key prefix
+                    let displayText = value; // fallback text
+
+                    // Extract base name (remove _id suffix)
+                    const baseKey = key.replace(/_id$/, '');
+
+                    // Try get display text from nested object e.g. investment_partner.name
+                    if (response.data[baseKey] && response.data[baseKey].name) {
+                        displayText = response.data[baseKey].name;
+                    }
+
+                    const newOption = new Option(displayText, value, true, true);
                     $field.append(newOption).trigger('change');
+                } else {
+                    $field.val(value).trigger('change');
                 }
             } else {
+                // Normal fields
                 $field.val(value);
             }
         });
+
 
         if (!$form.find(`input[name="${config.methodInputName}"]`).length) {
             $form.append(`<input type="hidden" name="${config.methodInputName}" value="PUT">`);
@@ -444,27 +713,56 @@ const openModal = (response) => {
 };
 
 // Modal close handler (reset form)
-const closeModal = () => {
+function closeModal() {
 
     const $form = $(config.formId);
     const $modal = $(config.modalId);
     const $title = $modal.find(config.titleSelector);
 
-    $title.text("Add ");
-    $form.trigger('reset');
-    $(config.urlInputId).val('');
-    $form.find(`input[name="${config.methodInputName}"]`).remove();
+    if ($title.length) $title.text("Add ");
 
-    $modal.modal('hide');
-};
+    if ($form.length) {
+        $form.trigger('reset');
+        $form.find('input[type="text"], input[type="number"], input[type="hidden"], textarea').val('');
+        $form.find('select').prop('selectedIndex', 0);
+        $form.find(`input[name="${config.methodInputName}"]`).remove();
+
+        if (config.urlInputId) $(config.urlInputId).val('');
+    }
+    if ($modal.length) $modal.modal('hide');
+
+    console.log('Form element:', $form.length, $form);
+    console.log('Modal element:', $modal.length, $modal);
+    console.log('Title element:', $title.length, $title);
+}
+
 
 
 $(document).ready(function () {
 
+    toastr.options = {
+        "closeButton": false,                // Show 'X' to close
+        "debug": true,                     // Useful for development; keep false in prod
+        "newestOnTop": true,                // New toasts appear above old ones
+        "progressBar": true,                // Show a loading bar
+        "positionClass": "toast-top-right", // Position on screen
+        "preventDuplicates": true,          // Avoid spamming the same toast
+        "onclick": null,                    // You can bind a click event if needed
+        "showDuration": "300",              // How fast to show (ms)
+        "hideDuration": "1000",             // How fast to hide (ms)
+        "timeOut": "3000",                  // Auto-hide after 3s
+        "extendedTimeOut": "1000",          // Hovered timeout
+        "showEasing": "swing",              // Animation when showing
+        "hideEasing": "linear",             // Animation when hiding
+        "showMethod": "fadeIn",             // jQuery method to show
+        "hideMethod": "fadeOut",            // jQuery method to hide
+        "tapToDismiss": true                // Allow click to dismiss
+    };
+
     // Event bindings
     $(document).on('click', config.createBtnClass, function () {
         const url = $(this).attr('data-url');
-        openModal(url);
+        openModal(config, url);
     });
 
     $(document).on('click', config.editBtnClass, function () {
@@ -488,16 +786,20 @@ $(document).ready(function () {
     });
 
     $(document).on('click', config.deleteBtnClass, function () {
-        if (confirm('Are you sure you want to delete this task?')) {
-            ajaxCall({
-                type: 'DELETE',
-                url: $(this).data('url'),
-                dataType: 'JSON',
-                data: { ids: $(this).data('id') },
-                crud: 'delete'
-            });
-            $(this).closest('tr').remove();
-        }
+        playAudio('warningAudio');
+
+        setTimeout(() => {
+            if (confirm('Are you sure you want to delete this task?')) {
+                ajaxCall({
+                    type: 'DELETE',
+                    url: $(this).data('url'),
+                    dataType: 'JSON',
+                    data: { ids: $(this).data('id') },
+                    crud: 'delete'
+                });
+                $(this).closest('tr').remove();
+            }
+        }, 200);
     });
 
     // single item boxes, each row on table
@@ -517,6 +819,8 @@ $(document).ready(function () {
     });
 
     $(config.multipleDeleteBtnId).on('click', function () {
+        playAudio('warningAudio');
+
         const selectedIds = $("input:checkbox[name=id]:checked").map(function () {
             return $(this).val();
         }).get();
@@ -532,6 +836,16 @@ $(document).ready(function () {
         }
     });
 
-    $(document).on('hidden.bs.modal', config.modalId, closeModal);
-    // end ajax crud process
+    $(document).on('hidden.bs.modal', config.modalId, closeModal); // end ajax crud process
+
 });
+
+// Generic play function
+function playAudio(id) {
+    const audio = document.getElementById(id);
+    if (audio) {
+        audio.play().catch(err => {
+            console.warn("Audio playback failed:", err);
+        });
+    }
+}
