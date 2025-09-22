@@ -4,6 +4,7 @@ use App\Http\Controllers\front\FrontendController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -30,14 +31,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 
-Route::get('/test', function () {
-    return '
-    <form method="POST" action="/test-post">
-        ' . csrf_field() . '
-        <button type="submit">Submit Test</button>
-    </form>';
-});
+// Route::get('/test', function () {
+//     return '
+//     <form method="POST" action="/test-post">
+//         ' . csrf_field() . '
+//         <button type="submit">Submit Test</button>
+//     </form>';
+// });
 
-Route::post('/test-post', function (Request $request) {
-    return 'CSRF passed! Session working ✅';
-});
+// Route::post('/test-post', function (Request $request) {
+//     Log::debug('Session data: ', session()->all());
+//     return 'CSRF passed! Session working ✅';
+// });

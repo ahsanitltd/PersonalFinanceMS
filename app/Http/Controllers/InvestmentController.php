@@ -46,7 +46,7 @@ class InvestmentController extends Controller
             InvestmentLog::create([
                 "investment_id" => $allData->id,
                 'type' => 'investment',
-                "paid_by" => 16,
+                "paid_by" => Auth::id() ?? 1,
                 "amount" => $request->amount_invested,
                 'user_id' => $data['user_id']
             ]);
