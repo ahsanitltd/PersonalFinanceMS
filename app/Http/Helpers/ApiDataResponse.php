@@ -42,3 +42,10 @@ if (! function_exists('errorResponse')) {
         }
     }
 }
+
+if (! function_exists('formatBDT')) {
+    function formatBDT($value)
+    {
+        return number_format($value, 2, '.', ',') . ' BDT';
+    }
+}

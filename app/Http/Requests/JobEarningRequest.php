@@ -24,7 +24,8 @@ class JobEarningRequest extends FormRequest
         return [
             'company_id' => 'required|numeric',
             'amount' => 'required|numeric',
-            'currency' => 'required|string',
+
+            'currency' => 'nullable|string',
             'earn_month' => 'nullable',
             'is_paid' => 'nullable',
             'paid_at' => 'nullable',

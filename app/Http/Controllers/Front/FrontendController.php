@@ -30,58 +30,123 @@ class FrontendController extends Controller
         $totalDue = $yourDue + $partnerDue;
         $netWorth = $assets + $partnerDue - $yourDue;
 
-        // Job Earnings
-        $monthlyIncome = (float) JobEarning::whereBetween('created_at', [$monthStart, now()])
-            ->where('is_paid', true)->sum('amount');
-
-        $dailyIncome = (float) JobEarning::whereDate('created_at', $today)
-            ->where('is_paid', true)->sum('amount');
-
-        $unpaidJobEarnings = (float) JobEarning::where('is_paid', false)->sum('amount');
-
-        // Expenses
-        $monthlyExpenses = (float) InvestmentLog::where('user_id', $userId)
-            ->whereBetween('created_at', [$monthStart, now()])
-            ->whereIn('type', ['loss', 'due_payment'])
+        // Income: Job + Investment (due_payment + profit)
+        $monthlyJobIncome = (float) JobEarning::whereBetween('created_at', [$monthStart, $now])
+            ->where('is_paid', true)
             ->sum('amount');
 
-        $dailyExpenses = (float) InvestmentLog::where('user_id', $userId)
+        $monthlyInvestmentIncome = (float) InvestmentLog::where('user_id', $userId)
+            ->whereBetween('created_at', [$monthStart, $now])
+            ->whereIn('type', ['profit', 'due_payment'])
+            ->sum('amount');
+
+        $monthlyProfitOnly = (float) InvestmentLog::where('user_id', $userId)
+            ->whereBetween('created_at', [$monthStart, $now])
+            ->where('type', 'profit')
+            ->sum('amount');
+
+        $monthlyIncome = $monthlyJobIncome + $monthlyInvestmentIncome;
+
+        // Daily Income
+        $dailyJobIncome = (float) JobEarning::whereDate('created_at', $today)
+            ->where('is_paid', true)
+            ->sum('amount');
+
+        $dailyInvestmentIncome = (float) InvestmentLog::where('user_id', $userId)
             ->whereDate('created_at', $today)
-            ->whereIn('type', ['loss', 'due_payment'])
+            ->whereIn('type', ['profit', 'due_payment'])
             ->sum('amount');
 
-        // Income vs Expense trend
-        $incomeTrend = JobEarning::select(
+        $dailyProfitOnly = (float) InvestmentLog::where('user_id', $userId)
+            ->whereDate('created_at', $today)
+            ->where('type', 'profit')
+            ->sum('amount');
+
+        $dailyIncome = $dailyJobIncome + $dailyInvestmentIncome;
+
+        // Income trend (Job + Investment)
+        $jobIncomeTrend = JobEarning::select(
             DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
             DB::raw('SUM(amount) as income')
         )
             ->where('is_paid', true)
-            ->groupBy('month')->orderBy('month')->get()->keyBy('month');
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month');
+
+        $investmentIncomeTrend = InvestmentLog::select(
+            DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+            DB::raw('SUM(amount) as income')
+        )
+            ->where('user_id', $userId)
+            ->whereIn('type', ['profit', 'due_payment'])
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month');
+
+        $incomeTrend = collect();
+
+        foreach ($jobIncomeTrend as $month => $data) {
+            $incomeTrend[$month] = ['income' => $data->income];
+        }
+
+        // Convert incomeTrend to array first if it's a Collection
+        $incomeTrend = $incomeTrend instanceof \Illuminate\Support\Collection ? $incomeTrend->toArray() : $incomeTrend;
+
+        foreach ($investmentIncomeTrend as $month => $data) {
+            if (isset($incomeTrend[$month])) {
+                $incomeTrend[$month]['income'] += $data->income;
+            } else {
+                $incomeTrend[$month] = ['income' => $data->income];
+            }
+        }
+
+        // If you need it as a Collection again, convert back
+        $incomeTrend = collect($incomeTrend);
+
+
+        // Expenses
+        $monthlyExpenses = (float) InvestmentLog::where('user_id', $userId)
+            ->whereBetween('created_at', [$monthStart, $now])
+            ->whereIn('type', ['investment', 'loss'])
+            ->sum('amount');
+
+        $dailyExpenses = (float) InvestmentLog::where('user_id', $userId)
+            ->whereDate('created_at', $today)
+            ->whereIn('type', ['investment', 'loss'])
+            ->sum('amount');
 
         $expenseTrend = InvestmentLog::select(
             DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
             DB::raw('SUM(amount) as expense')
         )
             ->where('user_id', $userId)
-            ->whereIn('type', ['loss', 'due_payment'])
-            ->groupBy('month')->orderBy('month')->get()->keyBy('month');
+            ->whereIn('type', ['investment', 'loss'])
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month');
 
+        // Merge income vs expense
         $months = $incomeTrend->keys()->merge($expenseTrend->keys())->unique()->sort();
 
         $incomeVsExpense = [];
         foreach ($months as $month) {
             $incomeVsExpense[$month] = [
-                'income' => $incomeTrend[$month]->income ?? 0,
+                'income' => $incomeTrend[$month]['income'] ?? 0,
                 'expense' => $expenseTrend[$month]->expense ?? 0,
             ];
         }
 
         // Top Expense Categories
         $topExpenses = InvestmentLog::where('user_id', $userId)
-            ->whereIn('type', ['loss', 'due_payment'])
+            ->whereIn('type', ['investment', 'loss'])
             ->select('type', DB::raw('SUM(amount) as total'))
             ->groupBy('type')
-            ->orderByDesc('total')->get();
+            ->orderByDesc('total')
+            ->get();
 
         // Aging Buckets
         $agingBuckets = [
@@ -113,12 +178,21 @@ class FrontendController extends Controller
             }
         }
 
+        // Unpaid job earnings
+        $unpaidJobEarnings = (float) JobEarning::where('is_paid', false)->sum('amount');
+
         return view('admin.dashboard', compact(
             'assets',
             'netWorth',
             'monthlyIncome',
-            'monthlyExpenses',
+            'monthlyJobIncome',
+            'monthlyInvestmentIncome',
+            'monthlyProfitOnly',
             'dailyIncome',
+            'dailyJobIncome',
+            'dailyInvestmentIncome',
+            'dailyProfitOnly',
+            'monthlyExpenses',
             'dailyExpenses',
             'yourDue',
             'partnerDue',

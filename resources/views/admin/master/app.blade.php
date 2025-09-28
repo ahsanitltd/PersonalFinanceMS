@@ -206,9 +206,9 @@
                     @yield('main-content')
             </section>
         </div>
-        <footer class="main-footer">
+        <footer class="main-footer text-center">
             <strong>
-                Copyright
+                {{ date('Y') }} Copyright
                 {{-- &copy; 2014-2021 <a href="https://adminlte.io">AdminLTE.io</a>.
                 All rights reserved. --}}
             </strong>
@@ -364,9 +364,6 @@
             });
         });
     </script>
-
-
-
 
     @yield('custom-js')
 
