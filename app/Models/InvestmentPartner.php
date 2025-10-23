@@ -23,6 +23,11 @@ class InvestmentPartner extends Model
         return $this->belongsTo(Company::class, 'company_id', 'id');
     }
 
+    public function investments()
+    {
+        return $this->hasMany(Investment::class, 'investment_partner_id', 'id');
+    }
+
 
     // Attribute - get user name from relationship 
     public function getCreatedByAttribute()

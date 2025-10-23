@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 
 use App\Models\Investment;
 use App\Models\InvestmentLog;
+use App\Models\InvestmentPartner;
 use App\Models\JobEarning;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class FrontendController extends Controller
 {
-
     public function dashboard()
     {
         $userId = Auth::id() ?? 1;
@@ -22,7 +22,62 @@ class FrontendController extends Controller
         $monthStart = Carbon::now()->startOfMonth();
         $now = Carbon::now();
 
-        // Investments
+        // Fetch all partners for this user
+        $partners = InvestmentPartner::where('user_id', $userId)->get();
+
+        // Initialize arrays to hold partner-wise data
+        $partnerMonthlyIncome = [];
+        $partnerMonthlyProfit = [];
+        $partnerMonthlyExpenses = [];
+        $partnerDailyIncome = [];
+        $partnerTotalDue = [];
+        $partnerTotalInvested = [];
+
+        foreach ($partners as $partner) {
+            $partnerId = $partner->id;
+
+            // Investments by this partner
+            $partnerInvestmentsQuery = Investment::where('user_id', $userId)
+                ->where('investment_partner_id', $partnerId);
+
+            // Total invested by partner
+            $partnerTotalInvested[$partner->name] = (float) $partnerInvestmentsQuery->sum('amount_invested');
+
+            // Partner owes you (partner_due)
+            $partnerTotalDue[$partner->name] = (float) $partnerInvestmentsQuery->sum('partner_due');
+
+            // Monthly income for this partner (sum of profit + due_payment)
+            $partnerMonthlyIncome[$partner->name] = (float) InvestmentLog::where('user_id', $userId)
+                ->whereHas('investment', fn($q) => $q->where('investment_partner_id', $partnerId))
+                ->whereBetween('created_at', [$monthStart, $now])
+                ->whereIn('type', ['profit', 'due_payment'])
+                ->sum('amount');
+
+            // Monthly profit only
+            $partnerMonthlyProfit[$partner->name] = (float) InvestmentLog::where('user_id', $userId)
+                ->whereHas('investment', fn($q) => $q->where('investment_partner_id', $partnerId))
+                ->whereBetween('created_at', [$monthStart, $now])
+                ->where('type', 'profit')
+                ->sum('amount');
+
+            // Monthly expenses (investment + loss)
+            $partnerMonthlyExpenses[$partner->name] = (float) InvestmentLog::where('user_id', $userId)
+                ->whereHas('investment', fn($q) => $q->where('investment_partner_id', $partnerId))
+                ->whereBetween('created_at', [$monthStart, $now])
+                ->whereIn('type', ['investment', 'loss'])
+                ->sum('amount');
+
+            // Today's income (profit + due_payment)
+            $partnerDailyIncome[$partner->name] = (float) InvestmentLog::where('user_id', $userId)
+                ->whereHas('investment', fn($q) => $q->where('investment_partner_id', $partnerId))
+                ->whereDate('created_at', $today)
+                ->whereIn('type', ['profit', 'due_payment'])
+                ->sum('amount');
+        }
+
+        // -- The rest of your original method unchanged, returning all totals, trends, etc --
+
+        // Investments totals
         $investmentsQuery = Investment::where('user_id', $userId);
         $assets = (float) $investmentsQuery->sum('amount_invested');
         $yourDue = (float) $investmentsQuery->sum('your_due');
@@ -30,7 +85,7 @@ class FrontendController extends Controller
         $totalDue = $yourDue + $partnerDue;
         $netWorth = $assets + $partnerDue - $yourDue;
 
-        // Income: Job + Investment (due_payment + profit)
+        // Job Income + Investment income (totals)
         $monthlyJobIncome = (float) JobEarning::whereBetween('created_at', [$monthStart, $now])
             ->where('is_paid', true)
             ->sum('amount');
@@ -47,7 +102,7 @@ class FrontendController extends Controller
 
         $monthlyIncome = $monthlyJobIncome + $monthlyInvestmentIncome;
 
-        // Daily Income
+        // Daily Income (totals)
         $dailyJobIncome = (float) JobEarning::whereDate('created_at', $today)
             ->where('is_paid', true)
             ->sum('amount');
@@ -63,6 +118,18 @@ class FrontendController extends Controller
             ->sum('amount');
 
         $dailyIncome = $dailyJobIncome + $dailyInvestmentIncome;
+
+        // Monthly Expenses (total)
+        $monthlyExpenses = (float) InvestmentLog::where('user_id', $userId)
+            ->whereBetween('created_at', [$monthStart, $now])
+            ->whereIn('type', ['investment', 'loss'])
+            ->sum('amount');
+
+        // Daily Expenses (total)
+        $dailyExpenses = (float) InvestmentLog::where('user_id', $userId)
+            ->whereDate('created_at', $today)
+            ->whereIn('type', ['investment', 'loss'])
+            ->sum('amount');
 
         // Income trend (Job + Investment)
         $jobIncomeTrend = JobEarning::select(
@@ -92,7 +159,6 @@ class FrontendController extends Controller
             $incomeTrend[$month] = ['income' => $data->income];
         }
 
-        // Convert incomeTrend to array first if it's a Collection
         $incomeTrend = $incomeTrend instanceof \Illuminate\Support\Collection ? $incomeTrend->toArray() : $incomeTrend;
 
         foreach ($investmentIncomeTrend as $month => $data) {
@@ -103,21 +169,9 @@ class FrontendController extends Controller
             }
         }
 
-        // If you need it as a Collection again, convert back
         $incomeTrend = collect($incomeTrend);
 
-
-        // Expenses
-        $monthlyExpenses = (float) InvestmentLog::where('user_id', $userId)
-            ->whereBetween('created_at', [$monthStart, $now])
-            ->whereIn('type', ['investment', 'loss'])
-            ->sum('amount');
-
-        $dailyExpenses = (float) InvestmentLog::where('user_id', $userId)
-            ->whereDate('created_at', $today)
-            ->whereIn('type', ['investment', 'loss'])
-            ->sum('amount');
-
+        // Expense trend
         $expenseTrend = InvestmentLog::select(
             DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
             DB::raw('SUM(amount) as expense')
@@ -201,7 +255,14 @@ class FrontendController extends Controller
             'incomeVsExpense',
             'expenseTrend',
             'topExpenses',
-            'agingBuckets'
+            'agingBuckets',
+            // Partner wise data
+            'partnerMonthlyIncome',
+            'partnerMonthlyProfit',
+            'partnerMonthlyExpenses',
+            'partnerDailyIncome',
+            'partnerTotalDue',
+            'partnerTotalInvested'
         ));
     }
 
